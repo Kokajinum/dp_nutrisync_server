@@ -32,7 +32,11 @@ async function bootstrap() {
   //forbidNonWhitelisted: true
   //Tato volba zajistí, že pokud klient odešle data, která nejsou v DTO povolená, místo tichého odstranění těchto polí se vyhodí výjimka.
   app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true, // Enable automatic transformation
+    }),
   );
 
   await app.listen(process.env.PORT ?? 3000);

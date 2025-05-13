@@ -12,6 +12,7 @@ import { CreateUserProfileDto } from 'src/users/dto/create-user-profile.dto';
 import { UpdateUserProfileDto } from 'src/users/dto/update-user-profile.dto';
 import { CreateFoodDto } from 'src/foods/dto/create-food.dto';
 import { FoodResponseDto } from 'src/foods/dto/food-response.dto';
+import { SearchFoodResponseDto } from 'src/foods/dto/search-food.dto';
 
 @Injectable()
 export class SupabaseService {
@@ -149,6 +150,7 @@ export class SupabaseService {
       fat_g: parseFloat(foodData.fats),
       fiber_g: parseFloat(foodData.fiber),
       sugar_g: parseFloat(foodData.sugar),
+      salt_g: parseFloat(foodData.salt),
       created_by: userId,
       is_custom: true,
       food_name: foodData.name, // Store the default name in the foods table
@@ -249,5 +251,117 @@ export class SupabaseService {
     };
 
     return response;
+  }
+
+  async searchFoods(
+    accessToken: string,
+    page: number = 1,
+    limit: number = 10,
+    query: string = '',
+    lang: string,
+  ): Promise<SearchFoodResponseDto> {
+    if (!lang) {
+      throw new BadRequestException('Language header is required');
+    }
+
+    const client = this.createClientForUser(accessToken);
+    const offset = (page - 1) * limit;
+
+    // Create a query builder
+    let foodsQuery = client
+      .from('foods')
+      .select(
+        `
+        *,
+        food_translations!inner(name, brand),
+        food_category:food_categories(slug),
+        food_portions(
+          id, 
+          portion_weight_g,
+          food_portions_translations!inner(name)
+        )
+      `,
+        { count: 'exact' },
+      )
+      .eq('food_translations.locale', lang)
+      .eq('food_portions.food_portions_translations.locale', lang);
+
+    // Add search condition if query is provided
+    if (query && query.trim() !== '') {
+      foodsQuery = foodsQuery.ilike('food_translations.name', `%${query}%`);
+    }
+
+    // Add pagination
+    const { data, error, count } = await foodsQuery
+      .range(offset, offset + limit - 1)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Error while searching foods: ${error.message}`,
+      );
+    }
+
+    // Transform the data to match FoodResponseDto
+    const foodItems: FoodResponseDto[] = data.map((item) => {
+      // Get the default portion (first one) if available
+      const defaultPortion =
+        item.food_portions && item.food_portions.length > 0
+          ? item.food_portions[0]
+          : null;
+
+      // Extract serving size information from the portion name (e.g., "100 g")
+      let servingSizeValue = '';
+      let servingSizeUnit: 'g' | 'ml' = 'g'; // Default unit
+
+      if (defaultPortion) {
+        servingSizeValue = defaultPortion.portion_weight_g.toString();
+
+        // Try to extract unit from portion name if available
+        if (
+          defaultPortion.food_portions_translations &&
+          defaultPortion.food_portions_translations.length > 0
+        ) {
+          const portionName = defaultPortion.food_portions_translations[0].name;
+          if (portionName) {
+            // Check if the portion name contains "ml" to determine the unit
+            servingSizeUnit = portionName.toLowerCase().includes('ml')
+              ? 'ml'
+              : 'g';
+          }
+        }
+      }
+
+      return {
+        id: item.id,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        name: item.food_translations[0]?.name,
+        category: item.food_category.slug,
+        servingSizeValue: servingSizeValue,
+        servingSizeUnit: servingSizeUnit,
+        brand: item.food_translations[0]?.brand,
+        barcode: item.barcode,
+        calories: item.energy_kcal.toString(),
+        fats: item.fat_g.toString(),
+        carbs: item.carbs_g.toString(),
+        sugar: item.sugar_g?.toString(),
+        fiber: item.fiber_g?.toString(),
+        protein: item.protein_g.toString(),
+        salt: item.salt_g?.toString(),
+      };
+    });
+
+    // Create the response
+    const totalCount = count || 0;
+    const hasMore = totalCount > page * limit;
+
+    return {
+      items: foodItems,
+      totalCount,
+      page,
+      limit,
+      hasMore,
+    };
   }
 }
