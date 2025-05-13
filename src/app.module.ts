@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { UsersModule } from './users/users.module';
+import { FoodsModule } from './foods/foods.module';
 import { RequestLoggerMiddleware } from './common/middlewares/request-logger.middleware';
 
 @Module({
@@ -11,6 +12,7 @@ import { RequestLoggerMiddleware } from './common/middlewares/request-logger.mid
     AuthModule,
     SupabaseModule,
     UsersModule,
+    FoodsModule,
   ],
 })
 export class AppModule {
