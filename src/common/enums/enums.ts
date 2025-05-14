@@ -38,3 +38,10 @@ export enum GenderEnum {
   FEMALE = 'female',
   OTHER = 'other',
 }
+
+export enum MealTypeEnum {
+  BREAKFAST = 'breakfast',
+  LUNCH = 'lunch',
+  DINNER = 'dinner',
+  SNACK = 'snack',
+}
