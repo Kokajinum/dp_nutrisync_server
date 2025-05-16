@@ -9,7 +9,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SupabaseService } from '../supabase/supabase.service';
+import { UsersSupabaseService } from '../supabase/users-supabase.service';
 import { Request } from 'express';
 import { SupabaseClientFactory } from 'src/supabase/supabase-client.factory';
 import { AuthToken } from 'src/common/decorators/auth-token.decorator';
@@ -20,14 +20,14 @@ import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(private readonly usersSupabaseService: UsersSupabaseService) {}
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   async getProfile(
     @AuthToken() accessToken: string,
   ): Promise<UserProfileResponseDto> {
-    const data = await this.supabaseService.getUserProfile(accessToken);
+    const data = await this.usersSupabaseService.getUserProfile(accessToken);
     return data;
   }
 
@@ -43,7 +43,7 @@ export class UsersController {
       username: string;
       email: string;
     };
-    const data = await this.supabaseService.createUserProfile(
+    const data = await this.usersSupabaseService.createUserProfile(
       accessToken,
       user.userId,
       user.email,
@@ -57,9 +57,14 @@ export class UsersController {
   @Patch('profile')
   async updateProfile(
     @Req() req: Request,
+    @AuthToken() accessToken: string,
     @Body() updateUserProfileDto: UpdateUserProfileDto,
   ) {
     const user = req.user as { userId: string; username: string };
-    //return this.supabaseService.updateUserProfile(user.userId, updateUserProfileDto);
+    return this.usersSupabaseService.updateUserProfile(
+      accessToken,
+      user.userId,
+      updateUserProfileDto,
+    );
   }
 }

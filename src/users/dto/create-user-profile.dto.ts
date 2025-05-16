@@ -93,6 +93,15 @@ export class CreateUserProfileDto {
   @IsEnum(GenderEnum)
   gender?: GenderEnum;
 
+  @IsNumber()
+  protein_goal_g: number;
+
+  @IsNumber()
+  carbs_goal_g: number;
+
+  @IsNumber()
+  fat_goal_g: number;
+
   @IsBoolean()
   @IsOptional()
   notifications_enabled?: boolean;

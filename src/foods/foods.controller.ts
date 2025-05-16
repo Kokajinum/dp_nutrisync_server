@@ -10,7 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SupabaseService } from '../supabase/supabase.service';
+import { FoodsSupabaseService } from '../supabase/foods-supabase.service';
 import { CreateFoodDto } from './dto/create-food.dto';
 import { FoodResponseDto } from './dto/food-response.dto';
 import {
@@ -22,7 +22,7 @@ import { AuthToken } from 'src/common/decorators/auth-token.decorator';
 
 @Controller('foods')
 export class FoodsController {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(private readonly foodsSupabaseService: FoodsSupabaseService) {}
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -42,7 +42,7 @@ export class FoodsController {
       email: string;
     };
 
-    return this.supabaseService.createFood(
+    return this.foodsSupabaseService.createFood(
       accessToken,
       user.userId,
       createFoodDto,
@@ -63,7 +63,7 @@ export class FoodsController {
 
     const { page = 1, limit = 10, query = '' } = searchQuery;
 
-    return this.supabaseService.searchFoods(
+    return this.foodsSupabaseService.searchFoods(
       accessToken,
       page,
       limit,

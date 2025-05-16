@@ -10,7 +10,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SupabaseService } from '../supabase/supabase.service';
+import { DiarySupabaseService } from '../supabase/diary-supabase.service';
 import { DailyDiaryResponseDto } from './dto/daily-diary-response.dto';
 import { CreateFoodDiaryEntryDto } from './dto/create-food-diary-entry.dto';
 import { FoodDiaryEntryResponseDto } from './dto/food-diary-entry-response.dto';
@@ -19,7 +19,7 @@ import { AuthToken } from '../common/decorators/auth-token.decorator';
 
 @Controller('diary')
 export class DiaryController {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(private readonly diarySupabaseService: DiarySupabaseService) {}
 
   @UseGuards(JwtAuthGuard)
   @Get()
@@ -34,7 +34,11 @@ export class DiaryController {
       email: string;
     };
 
-    return this.supabaseService.getDailyDiary(accessToken, user.userId, date);
+    return this.diarySupabaseService.getDailyDiary(
+      accessToken,
+      user.userId,
+      date,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -50,7 +54,7 @@ export class DiaryController {
       email: string;
     };
 
-    return this.supabaseService.createFoodDiaryEntry(
+    return this.diarySupabaseService.createFoodDiaryEntry(
       accessToken,
       user.userId,
       createFoodDiaryEntryDto,
@@ -70,7 +74,7 @@ export class DiaryController {
       email: string;
     };
 
-    return this.supabaseService.deleteFoodDiaryEntry(
+    return this.diarySupabaseService.deleteFoodDiaryEntry(
       accessToken,
       user.userId,
       entryId,
