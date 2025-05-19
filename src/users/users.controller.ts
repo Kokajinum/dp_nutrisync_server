@@ -17,10 +17,76 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { UserProfileResponseDto } from './dto/user-profile-response.dto';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
+import { UserWeightDto } from './dto/user-weight.dto';
+import { WeightUnitEnum } from 'src/common/enums/enums';
+import { CreateUserWeightDto } from './dto/create-user-weight.dto';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersSupabaseService: UsersSupabaseService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Get('weights')
+  async getWeightHistory(
+    @Req() req: Request,
+    @AuthToken() accessToken: string,
+  ): Promise<UserWeightDto[]> {
+    const user = req.user as { userId: string; username: string };
+    return this.usersSupabaseService.getUserWeightHistory(
+      accessToken,
+      user.userId,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('weights/last7days')
+  async getWeightHistoryLast7Days(
+    @Req() req: Request,
+    @AuthToken() accessToken: string,
+  ): Promise<UserWeightDto[]> {
+    const user = req.user as { userId: string; username: string };
+    return this.usersSupabaseService.getUserWeightHistoryLast7Days(
+      accessToken,
+      user.userId,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('weights/last30days')
+  async getWeightHistoryLast30Days(
+    @Req() req: Request,
+    @AuthToken() accessToken: string,
+  ): Promise<UserWeightDto[]> {
+    const user = req.user as { userId: string; username: string };
+    return this.usersSupabaseService.getUserWeightHistoryLast30Days(
+      accessToken,
+      user.userId,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('weights')
+  async createWeight(
+    @Req() req: Request,
+    @AuthToken() accessToken: string,
+    @Body() weightData: CreateUserWeightDto,
+  ): Promise<UserWeightDto> {
+    const user = req.user as { userId: string; username: string };
+
+    // Convert to kg if needed
+    const weightInKg =
+      weightData.weight_unit === WeightUnitEnum.LBS
+        ? weightData.weight_value * 0.45359237
+        : weightData.weight_value;
+
+    return this.usersSupabaseService.createUserWeight(
+      accessToken,
+      user.userId,
+      weightInKg,
+      weightData.source || 'manual_entry',
+      weightData.measured_at,
+    );
+  }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')

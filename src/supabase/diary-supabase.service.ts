@@ -12,6 +12,7 @@ import { FoodDiaryEntryResponseDto } from 'src/diary/dto/food-diary-entry-respon
 import { UserProfileResponseDto } from 'src/users/dto/user-profile-response.dto';
 import { ActivityDiaryResponseDto } from 'src/diary/dto/activity-diary-response.dto';
 import { CreateActivityDiaryDto } from 'src/diary/dto/create-activity-diary.dto';
+import { ActivityDiaryEntryResponseDto } from 'src/diary/dto/activity-diary-entry-response.dto';
 
 @Injectable()
 export class DiarySupabaseService extends BaseSupabaseService {
@@ -511,6 +512,73 @@ export class DiarySupabaseService extends BaseSupabaseService {
     await this.updateDailyDiaryTotals(client, entry.day_id);
 
     return { success: true };
+  }
+
+  async getRecentFoodEntries(
+    accessToken: string,
+    userId: string,
+    limit: number,
+  ): Promise<FoodDiaryEntryResponseDto[]> {
+    const client = this.createClientForUser(accessToken);
+
+    const { data, error } = await client
+      .from('food_diary_entry')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Error fetching recent food entries: ${error.message}`,
+      );
+    }
+
+    return data || [];
+  }
+
+  async getRecentActivityEntries(
+    accessToken: string,
+    userId: string,
+    limit: number,
+  ): Promise<ActivityDiaryEntryResponseDto[]> {
+    const client = this.createClientForUser(accessToken);
+
+    // Nejprve získáme všechny activity diaries pro uživatele
+    const { data: diaries, error: diariesError } = await client
+      .from('activity_diary')
+      .select('id')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (diariesError) {
+      throw new InternalServerErrorException(
+        `Error fetching activity diaries: ${diariesError.message}`,
+      );
+    }
+
+    if (!diaries || diaries.length === 0) {
+      return [];
+    }
+
+    // Získáme diary IDs
+    const diaryIds = diaries.map((diary) => diary.id);
+
+    // Nyní získáme poslední activity entries z těchto diaries
+    const { data: entries, error: entriesError } = await client
+      .from('activity_diary_entry')
+      .select('*')
+      .in('diary_id', diaryIds)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (entriesError) {
+      throw new InternalServerErrorException(
+        `Error fetching recent activity entries: ${entriesError.message}`,
+      );
+    }
+
+    return entries || [];
   }
 
   private async updateDailyDiaryTotals(
