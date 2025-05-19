@@ -10,11 +10,330 @@ import { DailyDiaryResponseDto } from 'src/diary/dto/daily-diary-response.dto';
 import { CreateFoodDiaryEntryDto } from 'src/diary/dto/create-food-diary-entry.dto';
 import { FoodDiaryEntryResponseDto } from 'src/diary/dto/food-diary-entry-response.dto';
 import { UserProfileResponseDto } from 'src/users/dto/user-profile-response.dto';
+import { ActivityDiaryResponseDto } from 'src/diary/dto/activity-diary-response.dto';
+import { CreateActivityDiaryDto } from 'src/diary/dto/create-activity-diary.dto';
 
 @Injectable()
 export class DiarySupabaseService extends BaseSupabaseService {
   constructor(protected configService: ConfigService) {
     super(configService);
+  }
+
+  // Activity Diary Methods
+  async getActivityDiary(
+    accessToken: string,
+    userId: string,
+    diaryId: string,
+  ): Promise<ActivityDiaryResponseDto> {
+    const client = this.createClientForUser(accessToken);
+
+    // Get the activity diary
+    const { data: diaryData, error: diaryError } = await client
+      .from('activity_diary')
+      .select('*')
+      .eq('id', diaryId)
+      .eq('user_id', userId)
+      .single();
+
+    if (diaryError) {
+      throw new NotFoundException(
+        `Activity diary not found: ${diaryError.message}`,
+      );
+    }
+
+    // Get the activity diary entries
+    const { data: entriesData, error: entriesError } = await client
+      .from('activity_diary_entry')
+      .select('*')
+      .eq('diary_id', diaryId)
+      .order('created_at', { ascending: true });
+
+    if (entriesError) {
+      throw new InternalServerErrorException(
+        `Error while fetching activity diary entries: ${entriesError.message}`,
+      );
+    }
+
+    // Build the response
+    const response: ActivityDiaryResponseDto = {
+      ...diaryData,
+      entries: entriesData || [],
+    };
+
+    return response;
+  }
+
+  async getActivityDiaryByDate(
+    accessToken: string,
+    userId: string,
+    date: string,
+  ): Promise<ActivityDiaryResponseDto | null> {
+    const client = this.createClientForUser(accessToken);
+
+    // Format date for query (start of day)
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+
+    // End of day
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    // Find ActivityDiary for the given day
+    const { data: diaryData, error: diaryError } = await client
+      .from('activity_diary')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('start_at', startDate.toISOString())
+      .lt('start_at', endDate.toISOString())
+      .order('start_at', { ascending: true })
+      .maybeSingle();
+
+    if (diaryError) {
+      throw new InternalServerErrorException(
+        `Error while fetching activity diary: ${diaryError.message}`,
+      );
+    }
+
+    // If no record was found, return null
+    if (!diaryData) {
+      return null;
+    }
+
+    // Get entries for the found diary
+    const { data: entriesData, error: entriesError } = await client
+      .from('activity_diary_entry')
+      .select('*')
+      .eq('diary_id', diaryData.id)
+      .order('created_at', { ascending: true });
+
+    if (entriesError) {
+      throw new InternalServerErrorException(
+        `Error while fetching activity diary entries: ${entriesError.message}`,
+      );
+    }
+
+    // Build the response
+    const response: ActivityDiaryResponseDto = {
+      ...diaryData,
+      entries: entriesData || [],
+    };
+
+    return response;
+  }
+
+  async getAllActivityDiaries(
+    accessToken: string,
+    userId: string,
+  ): Promise<ActivityDiaryResponseDto[]> {
+    const client = this.createClientForUser(accessToken);
+
+    // Get all activity diaries for the user
+    const { data: diariesData, error: diariesError } = await client
+      .from('activity_diary')
+      .select('*')
+      .eq('user_id', userId)
+      .order('start_at', { ascending: false });
+
+    if (diariesError) {
+      throw new InternalServerErrorException(
+        `Error while fetching activity diaries: ${diariesError.message}`,
+      );
+    }
+
+    if (!diariesData || diariesData.length === 0) {
+      return [];
+    }
+
+    // Get all entries for all diaries
+    const diaryIds = diariesData.map((diary) => diary.id);
+    const { data: entriesData, error: entriesError } = await client
+      .from('activity_diary_entry')
+      .select('*')
+      .in('diary_id', diaryIds)
+      .order('created_at', { ascending: true });
+
+    if (entriesError) {
+      throw new InternalServerErrorException(
+        `Error while fetching activity diary entries: ${entriesError.message}`,
+      );
+    }
+
+    // Group entries by diary_id
+    const entriesByDiaryId = (entriesData || []).reduce((acc, entry) => {
+      if (!acc[entry.diary_id]) {
+        acc[entry.diary_id] = [];
+      }
+      acc[entry.diary_id].push(entry);
+      return acc;
+    }, {});
+
+    // Build the response
+    const response = diariesData.map((diary) => ({
+      ...diary,
+      entries: entriesByDiaryId[diary.id] || [],
+    }));
+
+    return response;
+  }
+
+  async saveActivityDiary(
+    accessToken: string,
+    userId: string,
+    diaryData: CreateActivityDiaryDto,
+  ): Promise<ActivityDiaryResponseDto> {
+    const client = this.createClientForUser(accessToken);
+
+    try {
+      let diaryId: string | undefined = diaryData.id;
+      let isNewDiary = false;
+
+      // If diary ID is provided, update the existing diary
+      if (diaryId !== undefined) {
+        // Check if the diary exists and belongs to the user
+        const { data: existingDiary, error: checkError } = await client
+          .from('activity_diary')
+          .select('id')
+          .eq('id', diaryId)
+          .eq('user_id', userId)
+          .single();
+
+        if (checkError || !existingDiary) {
+          throw new NotFoundException(
+            `Activity diary not found or does not belong to the user`,
+          );
+        }
+
+        // Update the diary
+        const { error: updateError } = await client
+          .from('activity_diary')
+          .update({
+            start_at: diaryData.start_at,
+            end_at: diaryData.end_at,
+            bodyweight_kg: diaryData.bodyweight_kg,
+            notes: diaryData.notes,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', diaryId)
+          .eq('user_id', userId);
+
+        if (updateError) {
+          throw new InternalServerErrorException(
+            `Error updating activity diary: ${updateError.message}`,
+          );
+        }
+      } else {
+        // Create a new diary
+        isNewDiary = true;
+        const { data: newDiary, error: createError } = await client
+          .from('activity_diary')
+          .insert({
+            user_id: userId,
+            start_at: diaryData.start_at,
+            end_at: diaryData.end_at,
+            bodyweight_kg: diaryData.bodyweight_kg,
+            notes: diaryData.notes,
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          throw new InternalServerErrorException(
+            `Error creating activity diary: ${createError.message}`,
+          );
+        }
+
+        diaryId = newDiary.id;
+      }
+
+      // Process entries
+      if (!isNewDiary) {
+        // Get existing entries to determine which ones to delete
+        const { data: existingEntries, error: fetchError } = await client
+          .from('activity_diary_entry')
+          .select('id')
+          .eq('diary_id', diaryId);
+
+        if (fetchError) {
+          throw new InternalServerErrorException(
+            `Error fetching existing entries: ${fetchError.message}`,
+          );
+        }
+
+        // Find entries to delete (those in DB but not in the request)
+        const newEntryIds = diaryData.entries
+          .filter((e) => e.id)
+          .map((e) => e.id);
+        const entriesToDelete = existingEntries
+          .filter((e) => !newEntryIds.includes(e.id))
+          .map((e) => e.id);
+
+        // Delete entries that are not in the request
+        if (entriesToDelete.length > 0) {
+          const { error: deleteError } = await client
+            .from('activity_diary_entry')
+            .delete()
+            .in('id', entriesToDelete);
+
+          if (deleteError) {
+            throw new InternalServerErrorException(
+              `Error deleting activity diary entries: ${deleteError.message}`,
+            );
+          }
+        }
+      }
+
+      // Process each entry
+      for (const entry of diaryData.entries) {
+        if (entry.id) {
+          // Update existing entry
+          const { error: updateEntryError } = await client
+            .from('activity_diary_entry')
+            .update({
+              exercise_id: entry.exercise_id,
+              sets_json: entry.sets_json,
+              est_kcal: entry.est_kcal || 0,
+              notes: entry.notes || '',
+            })
+            .eq('id', entry.id)
+            .eq('diary_id', diaryId);
+
+          if (updateEntryError) {
+            throw new InternalServerErrorException(
+              `Error updating activity diary entry: ${updateEntryError.message}`,
+            );
+          }
+        } else {
+          // Create new entry
+          const { error: createEntryError } = await client
+            .from('activity_diary_entry')
+            .insert({
+              diary_id: diaryId,
+              exercise_id: entry.exercise_id,
+              sets_json: entry.sets_json,
+              est_kcal: entry.est_kcal || 0,
+              notes: entry.notes || '',
+            });
+
+          if (createEntryError) {
+            throw new InternalServerErrorException(
+              `Error creating activity diary entry: ${createEntryError.message}`,
+            );
+          }
+        }
+      }
+
+      // Return the updated diary
+      if (!diaryId) {
+        throw new InternalServerErrorException(
+          'Failed to get diary ID after save operation',
+        );
+      }
+
+      return this.getActivityDiary(accessToken, userId, diaryId);
+    } catch (error) {
+      // Just rethrow the error without rollback
+      throw error;
+    }
   }
 
   async getDailyDiary(
