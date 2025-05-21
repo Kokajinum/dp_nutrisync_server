@@ -117,7 +117,7 @@ export class PushTokensSupabaseService extends BaseSupabaseService {
   }
 
   async getAllUserIdsWithPushTokens(): Promise<string[]> {
-    // This method will be used in RecommendationAgentService
+    // This method will be used in RecommendationAgentSupabaseService
     // We use service_role key to access all users
     const client = this.createClientForUser('', true); // Using service role
 

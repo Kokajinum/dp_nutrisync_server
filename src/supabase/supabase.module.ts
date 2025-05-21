@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { OpenAiModule } from '../openai/openai.module';
 import { SupabaseClientFactory } from './supabase-client.factory';
 import { BaseSupabaseService } from './base-supabase.service';
 import { UsersSupabaseService } from './users-supabase.service';
@@ -9,9 +10,10 @@ import { StepsSupabaseService } from './steps-supabase.service';
 import { AiRecommendationsSupabaseService } from './ai-recommendations-supabase.service';
 import { PushTokensSupabaseService } from './push-tokens-supabase.service';
 import { NotificationsSupabaseService } from './notifications-supabase.service';
+import { RecommendationAgentSupabaseService } from './recommendation-agent-supabase.service';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, OpenAiModule],
   providers: [
     SupabaseClientFactory,
     BaseSupabaseService,
@@ -22,6 +24,7 @@ import { NotificationsSupabaseService } from './notifications-supabase.service';
     AiRecommendationsSupabaseService,
     PushTokensSupabaseService,
     NotificationsSupabaseService,
+    RecommendationAgentSupabaseService,
   ],
   exports: [
     SupabaseClientFactory,
@@ -32,6 +35,7 @@ import { NotificationsSupabaseService } from './notifications-supabase.service';
     AiRecommendationsSupabaseService,
     PushTokensSupabaseService,
     NotificationsSupabaseService,
+    RecommendationAgentSupabaseService,
   ],
 })
 export class SupabaseModule {}

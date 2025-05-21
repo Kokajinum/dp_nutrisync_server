@@ -341,8 +341,15 @@ export class DiarySupabaseService extends BaseSupabaseService {
     accessToken: string,
     userId: string,
     date: string,
+    useServiceRole?: boolean,
   ): Promise<DailyDiaryResponseDto> {
-    const client = this.createClientForUser(accessToken);
+    let client: SupabaseClient;
+
+    if (useServiceRole) {
+      client = this.createClientForUser('', true);
+    } else {
+      client = this.createClientForUser(accessToken);
+    }
 
     // Format the date for the query
     const formattedDate = new Date(date).toISOString().split('T')[0];
