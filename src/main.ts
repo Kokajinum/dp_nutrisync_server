@@ -1,3 +1,15 @@
+// // Add crypto.randomUUID polyfill if not available
+// if (
+//   typeof global.crypto === 'undefined' ||
+//   typeof global.crypto.randomUUID === 'undefined'
+// ) {
+//   const nodeCrypto = require('crypto');
+//   // Instead of trying to implement the full Crypto interface,
+//   // we'll just add the randomUUID function which is what @nestjs/schedule needs
+//   global.crypto = global.crypto || {};
+//   global.crypto.randomUUID = () => nodeCrypto.randomUUID();
+// }
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
