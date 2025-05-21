@@ -7,6 +7,8 @@ import { FoodsSupabaseService } from './foods-supabase.service';
 import { DiarySupabaseService } from './diary-supabase.service';
 import { StepsSupabaseService } from './steps-supabase.service';
 import { AiRecommendationsSupabaseService } from './ai-recommendations-supabase.service';
+import { PushTokensSupabaseService } from './push-tokens-supabase.service';
+import { NotificationsSupabaseService } from './notifications-supabase.service';
 
 @Module({
   imports: [ConfigModule],
@@ -18,6 +20,8 @@ import { AiRecommendationsSupabaseService } from './ai-recommendations-supabase.
     DiarySupabaseService,
     StepsSupabaseService,
     AiRecommendationsSupabaseService,
+    PushTokensSupabaseService,
+    NotificationsSupabaseService,
   ],
   exports: [
     SupabaseClientFactory,
@@ -26,6 +30,8 @@ import { AiRecommendationsSupabaseService } from './ai-recommendations-supabase.
     DiarySupabaseService,
     StepsSupabaseService,
     AiRecommendationsSupabaseService,
+    PushTokensSupabaseService,
+    NotificationsSupabaseService,
   ],
 })
 export class SupabaseModule {}
