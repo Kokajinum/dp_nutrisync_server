@@ -98,7 +98,7 @@ export class RecommendationAgentSupabaseService extends BaseSupabaseService {
       const prompt = this.buildPrompt(userProfile, diary);
 
       // Generate the recommendation using OpenAI
-      const model = 'gpt-4o-mini';
+      const model = 'gpt-4o';
       const response = await this.openAiService.generateCompletion(
         prompt,
         model,
@@ -181,13 +181,21 @@ Celkem: ${caloriesConsumed} kcal, ${proteinConsumed}g bílkovin (${proteinPercen
 Seznam jídel:
 ${foodEntries}
 
-Prosím, poskytni personalizované doporučení na základě těchto dat. Odpověz ve formátu JSON s následujícími klíči:
-1. "summary": Stručné shrnutí včerejšího jídelníčku
-2. "positives": Co dělá uživatel dobře (alespoň 2-3 body)
-3. "improvements": Doporučení ke zlepšení (alespoň 2-3 body)
-4. "motivation": Motivační zpráva pro uživatele
+Prosím, poskytni personalizované doporučení na základě těchto dat. Odpověz POUZE čistým JSON objektem bez jakéhokoliv formátování markdown nebo vysvětlujícího textu. JSON objekt musí obsahovat následující klíče:
 
-Odpověď musí být v češtině a ve formátu JSON.
+{
+  "summary": "Stručné shrnutí včerejšího jídelníčku",
+  "positives": [
+    "Co dělá uživatel dobře - bod 1",
+    "Co dělá uživatel dobře - bod 2"
+  ],
+  "improvements": [
+    "Doporučení ke zlepšení - bod 1"
+  ],
+  "motivation": "Motivační zpráva pro uživatele"
+}
+
+Odpověď musí být v češtině a obsahovat POUZE validní JSON objekt bez jakéhokoliv úvodního nebo závěrečného textu.
 `;
   }
 

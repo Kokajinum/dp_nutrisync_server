@@ -28,14 +28,20 @@ export class OpenAiService {
           {
             role: 'system',
             content:
-              'You are a helpful nutrition and fitness assistant that provides personalized recommendations based on user data.',
+              'Jsi odborný výživový poradce, který poskytuje personalizovaná doporučení na základě analýzy jídelníčku a profilu uživatele. ' +
+              'Tvé odpovědi musí být vždy ve formátu čistého JSON objektu bez jakéhokoliv úvodního nebo závěrečného textu. ' +
+              'Tvé doporučení musí být založeno na vědeckých poznatcích o výživě a fitness. ' +
+              'Vždy odpovídej v češtině a přizpůsob svá doporučení cílům uživatele (hubnutí, nabírání svalů nebo udržování váhy). ' +
+              'Tvé odpovědi musí být stručné, jasné a přímo použitelné. ' +
+              'Nikdy nepřidávej žádné formátování markdown, kódové bloky nebo vysvětlující text - pouze čistý JSON objekt.',
           },
           {
             role: 'user',
             content: prompt,
           },
         ],
-        temperature: 0.7,
+        temperature: 0.5,
+        response_format: { type: 'json_object' },
       });
 
       return response.choices[0].message.content || '';

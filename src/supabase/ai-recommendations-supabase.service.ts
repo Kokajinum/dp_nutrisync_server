@@ -58,7 +58,7 @@ export class AiRecommendationsSupabaseService extends BaseSupabaseService {
   async createRecommendation(
     recommendationData: CreateAiRecommendationDto,
   ): Promise<AiRecommendationResponseDto> {
-    const client = this.createClientForUser("", true);
+    const client = this.createClientForUser('', true);
 
     const { data, error } = await client
       .from('ai_recommendations')
