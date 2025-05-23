@@ -15,13 +15,19 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { WinstonModule } from 'nest-winston';
 import { format, transports } from 'winston';
+import 'winston-daily-rotate-file';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: WinstonModule.createLogger({
       transports: [
-        new transports.File({
-          filename: `logs/combined.log`,
+        new transports.DailyRotateFile({
+          filename: 'logs/application-%DATE%.log',
+          datePattern: 'YYYY-MM-DD',
+          zippedArchive: true,
+          maxSize: '20m',
+          maxFiles: '14d',
           format: format.combine(format.timestamp(), format.json()),
         }),
         new transports.Console({
@@ -37,6 +43,9 @@ async function bootstrap() {
       ],
     }),
   });
+
+  // Apply global exception filter for catching and logging unhandled exceptions
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   //automaticka globalni validace
   //whitelist: true
