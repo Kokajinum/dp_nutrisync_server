@@ -16,24 +16,66 @@ export class StepsSupabaseService extends BaseSupabaseService {
     stepData: CreateStepMeasurementDto,
   ): Promise<StepMeasurementResponseDto> {
     const client = this.createClientForUser(accessToken);
+
+    // Extract date from start_time and create date range for the day
+    const startDate = stepData.start_time.split('T')[0];
+    const dayStart = `${startDate}T00:00:00.000Z`;
+    const dayEnd = `${startDate}T23:59:59.999Z`;
+
+    // Find existing record for this date (assuming only one per day)
+    const { data: existingRecord, error: findError } = await client
+      .from('step_measurements')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('start_time', dayStart)
+      .lte('start_time', dayEnd)
+      .single();
+
     const payload = {
       user_id: userId,
       ...stepData,
     };
 
-    const { data, error } = await client
-      .from('step_measurements')
-      .insert(payload)
-      .select()
-      .single();
+    // If record exists, update it
+    if (existingRecord && !findError) {
+      const { data, error } = await client
+        .from('step_measurements')
+        .update(payload)
+        .eq('id', existingRecord.id)
+        .select()
+        .single();
 
-    if (error) {
-      throw new InternalServerErrorException(
-        `Error while creating step measurement: ${error.message}`,
-      );
+      if (error) {
+        throw new InternalServerErrorException(
+          `Error while updating step measurement: ${error.message}`,
+        );
+      }
+
+      return data;
+    } else {
+      // If no record exists or there was an error because no record was found
+      if (findError && findError.code !== 'PGRST116') {
+        // PGRST116 is the error code when no rows returned by .single()
+        throw new InternalServerErrorException(
+          `Error while checking existing step measurements: ${findError.message}`,
+        );
+      }
+
+      // Insert new record
+      const { data, error } = await client
+        .from('step_measurements')
+        .insert(payload)
+        .select()
+        .single();
+
+      if (error) {
+        throw new InternalServerErrorException(
+          `Error while creating step measurement: ${error.message}`,
+        );
+      }
+
+      return data;
     }
-
-    return data;
   }
 
   async getStepMeasurementsForLastDays(
