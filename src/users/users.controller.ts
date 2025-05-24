@@ -120,7 +120,7 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Patch('profile')
+  @Post('updateProfile')
   async updateProfile(
     @Req() req: Request,
     @AuthToken() accessToken: string,

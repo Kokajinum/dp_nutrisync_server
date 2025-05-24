@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsIn } from 'class-validator';
+import { IsNotEmpty, IsString, IsIn, IsOptional } from 'class-validator';
 
 export class CreateFoodDto {
   @IsNotEmpty()
@@ -17,7 +17,7 @@ export class CreateFoodDto {
   @IsIn(['g', 'ml'])
   servingSizeUnit: 'g' | 'ml';
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   brand: string;
 
