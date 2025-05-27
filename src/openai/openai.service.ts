@@ -19,7 +19,7 @@ export class OpenAiService {
 
   async generateCompletion(
     prompt: string,
-    model: string = 'gpt-4o-mini',
+    model: string = 'gpt-4o',
   ): Promise<string> {
     try {
       const response = await this.openai.chat.completions.create({
